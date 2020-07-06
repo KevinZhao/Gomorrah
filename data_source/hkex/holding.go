@@ -4,13 +4,15 @@
 package hkex
 
 import (
+    "os"
 	"fmt"
+    "net/http"
+    "encoding/csv"
 	"Gomorrah/http_operation"
-	"net/http"
     "github.com/PuerkitoBio/goquery"
 )
 
-func Tbd()  {
+func GetHolding()  {
 	//processing url
 	fmt.Println("processing url")
 
@@ -19,14 +21,13 @@ func Tbd()  {
 		"https://sc.hkexnews.hk/TuniS/www.hkexnews.hk/sdw/search/mutualmarket_c.aspx?t=sh&t=sh",
 		"")
 
-	//holdingPaser(resp)
-
+	ParseHolding(resp)
 }
 
-func holdingPaser(response *http.Response)  {
+func ParseHolding(response *http.Response)  {
 
     var headings, row []string
-    var rows [][]string
+    var data [][]string
 
     doc, err := goquery.NewDocumentFromResponse(response)
     if err != nil {
@@ -47,6 +48,8 @@ func holdingPaser(response *http.Response)  {
             })
         })
 
+        data = append(data, headings)
+
         tablehtml.Find("tbody").Each(func(indextbody int, bodyhtml *goquery.Selection){
             bodyhtml.Find("tr").Each(func(indextr int, rowhtml *goquery.Selection){
                 rowhtml.Find("td").Each(func(indextd int, tablecell *goquery.Selection) {
@@ -55,17 +58,26 @@ func holdingPaser(response *http.Response)  {
                         if value.HasClass("mobile-list-body"){
                             row = append(row, value.Text())
                         }
-
-                        fmt.Println("row = ", len(row), row)
                     })
                 })
-                rows = append(rows, row)
+                data = append(data, row)
                 row = nil
             })
         })
     })
-
-    fmt.Println("####### headings = ", len(headings), headings)
-    fmt.Println("####### rows = ", len(rows), rows)
-
+    saveHoldingtoCSV(data)
 }
+
+func saveHoldingtoCSV(data [][]string){
+
+    file, _ := os.OpenFile("test.csv", os.O_WRONLY|os.O_CREATE, os.ModePerm)
+    w := csv.NewWriter(file)
+
+    //write using UTF-8
+    file.WriteString("\xEF\xBB\xBF")
+    w.WriteAll(data)
+    w.Flush()
+    file.Close()
+}
+
+
